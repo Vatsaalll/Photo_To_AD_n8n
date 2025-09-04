@@ -1,0 +1,489 @@
+{
+  "name": "TelegramBotADCreator",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "edited_message"
+        ],
+        "additionalFields": {}
+      },
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "a431d3fb-9df9-4807-ac4f-34b57f76bd4b",
+      "webhookId": "2202cb66-4aab-40a3-bc83-4bb7646e6d89",
+      "credentials": {
+        "telegramApi": {
+          "id": "BK9gSM3aAJGg6QW3",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $node[\"Telegram Trigger\"].json[\"message.chat.id\"] }}",
+        "text": "Got it. I'm now crafting your prompts.",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "name": "Telegram Send Initial Message",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [
+        200,
+        0
+      ],
+      "id": "eaed2719-8448-4e5d-896d-994975f87bf3",
+      "webhookId": "2691acb5-d040-4fd7-abaa-4bd326121242"
+    },
+    {
+      "parameters": {
+        "url": "https://api.telegram.org/bot{{ $credentials[\"Telegram Bot Token\"].accessToken }}/getFile?file_id={{ $node[\"Telegram Trigger\"].json[\"message.photo.0.file_id\"] }}",
+        "options": {}
+      },
+      "name": "Get Image Path",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        400,
+        0
+      ],
+      "id": "446325ab-958a-4e71-a237-5fd04a6f9fbe"
+    },
+    {
+      "parameters": {},
+      "name": "Analyze Image",
+      "type": "n8n-nodes-base.openAiImage",
+      "typeVersion": 1,
+      "position": [
+        600,
+        0
+      ],
+      "id": "aabf0aaa-fde8-4eb3-8c8f-43382667fbc6",
+      "credentials": {
+        "openAiApi": {
+          "id": null,
+          "name": "OpenAI API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o",
+        "options": {},
+        "requestOptions": {}
+      },
+      "name": "Initial Prompt AI Agent",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1,
+      "position": [
+        800,
+        0
+      ],
+      "id": "49c866d2-5cd4-492e-9206-114fb5cdaf1e",
+      "credentials": {
+        "openAiApi": {
+          "id": null,
+          "name": "OpenAI API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "image_prompt",
+              "value": "={{ $node[\"Initial Prompt AI Agent\"].json[\"image_prompt\"] }}"
+            },
+            {
+              "name": "video_prompt",
+              "value": "={{ $node[\"Initial Prompt AI Agent\"].json[\"video_prompt\"] }}"
+            },
+            {
+              "name": "caption",
+              "value": "={{ $node[\"Initial Prompt AI Agent\"].json[\"caption\"] }}"
+            },
+            {
+              "name": "creative_summary",
+              "value": "={{ $node[\"Initial Prompt AI Agent\"].json[\"creative_summary\"] }}"
+            },
+            {
+              "name": "aspect_ratio",
+              "value": "={{ $node[\"Initial Prompt AI Agent\"].json[\"aspect_ratio\"] }}"
+            },
+            {
+              "name": "video_model",
+              "value": "={{ $node[\"Initial Prompt AI Agent\"].json[\"video_model\"] }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Set Prompts",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [
+        1000,
+        0
+      ],
+      "id": "d6e899a9-5bc8-4335-8a24-8151572fd377"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $node[\"Telegram Trigger\"].json[\"message.chat.id\"] }}",
+        "text": "Here's your ad preview:\n\nCaption: {{ $node[\"Set Prompts\"].json[\"caption\"] }}\n\nCreative Summary: {{ $node[\"Set Prompts\"].json[\"creative_summary\"] }}\n\nAspect Ratio: {{ $node[\"Set Prompts\"].json[\"aspect_ratio\"] }}\n\nVideo Model: {{ $node[\"Set Prompts\"].json[\"video_model\"] }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "name": "Get Approval",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        0
+      ],
+      "id": "ca71e1f7-f1b5-4ac7-b771-92d0ec263a8d",
+      "webhookId": "3156e573-e83a-48ca-aff6-ef3b6726279e"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $node[\"Get Approval\"].json[\"data.callback_query.data\"] }}",
+              "operation": "endsWith",
+              "value2": "approve_yes"
+            }
+          ]
+        }
+      },
+      "name": "If Approved?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        1400,
+        0
+      ],
+      "id": "5850fe89-2e41-4502-b92b-a5c48894d357"
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o",
+        "options": {},
+        "requestOptions": {}
+      },
+      "name": "Revised Prompt AI Agent",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1,
+      "position": [
+        1000,
+        200
+      ],
+      "id": "424a364d-3955-4ac1-86fc-fbffe335761e",
+      "credentials": {
+        "openAiApi": {
+          "id": null,
+          "name": "OpenAI API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $node[\"Telegram Trigger\"].json[\"message.chat.id\"] }}",
+        "text": "Generating your ad creative...",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "name": "In Progress",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [
+        1600,
+        0
+      ],
+      "id": "a8ed1480-695d-489c-a69e-1c299dc5bf93",
+      "webhookId": "e621b014-5c1f-49b8-bb0b-07bbf4a08b7c"
+    },
+    {
+      "parameters": {
+        "requestMethod": "POST",
+        "url": "https://api.keyai.com/v1/generations/gpt-4o-image",
+        "options": {}
+      },
+      "name": "Create GPT Image",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        1800,
+        0
+      ],
+      "id": "d435993e-2e7e-459b-b3c8-267b999cd9fd"
+    },
+    {
+      "parameters": {},
+      "name": "Wait for Image",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [
+        2000,
+        0
+      ],
+      "id": "6807f733-e7fe-4512-b1cf-edcd15b0e849",
+      "webhookId": "1fb08bd6-8d6b-427b-b02e-88c81e2f4906"
+    },
+    {
+      "parameters": {
+        "url": "https://api.keyai.com/v1/generations/gpt-4o-image/{{ $node[\"Create GPT Image\"].json[\"id\"] }}",
+        "options": {}
+      },
+      "name": "Get GPT Image",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        2200,
+        0
+      ],
+      "id": "ac845400-632f-42d0-aaa5-1e4078ada474"
+    },
+    {
+      "parameters": {
+        "requestMethod": "POST",
+        "url": "https://api.keyai.com/v1/generations/veo3",
+        "options": {}
+      },
+      "name": "Create V3",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        2400,
+        0
+      ],
+      "id": "7fc06d2e-6dd7-4ee4-8ef8-12ff205f8351"
+    },
+    {
+      "parameters": {},
+      "name": "Wait for Video",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [
+        2600,
+        0
+      ],
+      "id": "4bf8019a-9908-47a8-884e-15983322eee3",
+      "webhookId": "2e51bd9d-d868-4d6a-a9eb-5d70faf9dda0"
+    },
+    {
+      "parameters": {
+        "url": "https://api.keyai.com/v1/generations/veo3/{{ $node[\"Create V3\"].json[\"id\"] }}",
+        "options": {}
+      },
+      "name": "Get V3",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        2800,
+        0
+      ],
+      "id": "9bd9a937-a7bf-48ee-8cd6-37b132802dd8"
+    },
+    {
+      "parameters": {
+        "operation": "sendVideo",
+        "chatId": "={{ $node[\"Telegram Trigger\"].json[\"message.chat.id\"] }}",
+        "additionalFields": {}
+      },
+      "name": "Send Video",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [
+        3000,
+        0
+      ],
+      "id": "619bc253-a2b9-443f-a841-30a7c61e72c5",
+      "webhookId": "adea43a3-baf8-4243-b6d9-2185f7d342eb"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Telegram Send Initial Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram Send Initial Message": {
+      "main": [
+        [
+          {
+            "node": "Get Image Path",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Initial Prompt AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Set Prompts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Prompts": {
+      "main": [
+        [
+          {
+            "node": "Get Approval",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Approval": {
+      "main": [
+        [
+          {
+            "node": "If Approved?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Approved?": {
+      "main": [
+        [
+          {
+            "node": "In Progress",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Revised Prompt AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Revised Prompt AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Set Prompts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "In Progress": {
+      "main": [
+        [
+          {
+            "node": "Create GPT Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create GPT Image": {
+      "main": [
+        [
+          {
+            "node": "Wait for Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait for Image": {
+      "main": [
+        [
+          {
+            "node": "Get GPT Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get GPT Image": {
+      "main": [
+        [
+          {
+            "node": "Create V3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create V3": {
+      "main": [
+        [
+          {
+            "node": "Wait for Video",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait for Video": {
+      "main": [
+        [
+          {
+            "node": "Get V3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get V3": {
+      "main": [
+        [
+          {
+            "node": "Send Video",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "69a07f19-6902-4519-b4c8-d8cc05679945",
+  "meta": {
+    "instanceId": "46ae88b4b4b9b9bc592b3162de8dbc126d2fdff45e3d91d7cd3cb6f2ea12ade3"
+  },
+  "id": "g2Nd08wmBHPzgepx",
+  "tags": []
+}
